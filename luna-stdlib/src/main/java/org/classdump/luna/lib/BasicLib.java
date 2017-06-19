@@ -1047,7 +1047,13 @@ public final class BasicLib {
 
 		@Override
 		protected void invoke(ExecutionContext context, ArgumentIterator args) throws ResolvedControlThrowable {
-			Table t = args.nextTable();
+			Object t;
+			// userdata can have __pairs as well...
+			try {
+				t = args.nextTable();
+			} catch (BadArgumentException ignored) {
+				t = args.nextUserdata();
+			}
 			Object metamethod = Metatables.getMetamethod(context, MT_PAIRS, t);
 
 			if (metamethod != null) {
