@@ -98,6 +98,11 @@ public final class LuaFormat {
 	public static final ByteString TYPENAME_THREAD = ByteString.constOf("thread");
 
 	/**
+	 * Byte string representation of the Lua {@code lua object} type.
+	 */
+	public static final ByteString TYPENAME_LUAOBJECT = ByteString.constOf("luaobject");
+
+	/**
 	 * Returns the Lua format string representation of the boolean value {@code b}.
 	 *
 	 * <p><b>Note:</b> this method returns a {@code java.lang.String}. In order to

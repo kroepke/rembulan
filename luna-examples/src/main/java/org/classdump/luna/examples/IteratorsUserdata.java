@@ -1,5 +1,6 @@
 package org.classdump.luna.examples;
 
+import org.classdump.luna.Metatables;
 import org.classdump.luna.StateContext;
 import org.classdump.luna.Table;
 import org.classdump.luna.Variable;
@@ -12,6 +13,7 @@ import org.classdump.luna.impl.DefaultUserdata;
 import org.classdump.luna.impl.ImmutableTable;
 import org.classdump.luna.impl.NonsuspendableFunctionException;
 import org.classdump.luna.impl.StateContexts;
+import org.classdump.luna.lib.AbstractLibFunction;
 import org.classdump.luna.lib.ArgumentIterator;
 import org.classdump.luna.lib.BasicLib;
 import org.classdump.luna.lib.StandardLibrary;
@@ -24,16 +26,15 @@ import org.classdump.luna.runtime.LuaFunction;
 import org.classdump.luna.runtime.ResolvedControlThrowable;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 
-public class Iterators {
+public class IteratorsUserdata {
 
     public static void main(String[] args)
             throws InterruptedException, CallPausedException, CallException, LoaderException {
         String program = "local a = \"\"\n" +
-                "for elem in pairs(listish) do a = a .. 1 .. \", \" end\n" +
+                "for i, elem in ipairs(listish) do a = a .. i .. \" -> \".. elem .. \", \" end\n" +
                 "return a";
 
         StateContext state = StateContexts.newDefaultInstance();
@@ -54,30 +55,30 @@ public class Iterators {
 
     }
 
-    private static class IteratorNext extends AbstractFunction2 {
+    private static class IteratorNext extends AbstractLibFunction {
 
         @Override
-        public void invoke(ExecutionContext context, Object arg1, Object arg2) throws ResolvedControlThrowable {
-            ListIterator iterator = (ListIterator) arg1;
+        protected String name() {
+            return "java_list_next";
+        }
+
+        @Override
+        protected void invoke(ExecutionContext context, ArgumentIterator args) throws ResolvedControlThrowable {
+            final ListIterator iterator = args.nextOfClass(ListIterator.class);
             if (!iterator.hasNext()) {
                 context.getReturnBuffer().setTo(null);
                 return;
             }
-            final int idx = iterator.nextIndex();
             final Object next = iterator.next();
 
-            context.getReturnBuffer().setTo(idx, next);
-        }
-
-        @Override
-        public void resume(ExecutionContext context, Object suspendedState) throws ResolvedControlThrowable {
-            throw new NonsuspendableFunctionException();
+            context.getReturnBuffer().setTo(next);
         }
     }
 
     private static class CollectionBridge extends DefaultUserdata {
         private static final ImmutableTable META_TABLE = new ImmutableTable.Builder()
                 .add(BasicLib.MT_PAIRS, new CollectionIteratorPairs())
+                .add(Metatables.MT_INDEX, new ListIndex())
                 .build();
 
         /**
@@ -90,6 +91,10 @@ public class Iterators {
             super(META_TABLE, list);
         }
 
+        private List getList() {
+            return (List) getUserValue();
+        }
+
         private static class CollectionIteratorPairs extends AbstractFunction1 {
             @Override
             public void resume(ExecutionContext context, Object suspendedState) throws ResolvedControlThrowable {
@@ -98,9 +103,26 @@ public class Iterators {
 
             @Override
             public void invoke(ExecutionContext context, Object arg1) throws ResolvedControlThrowable {
-                CollectionBridge bridge = (CollectionBridge) arg1;
-                final List list = (List) bridge.getUserValue();
+                final List list = ((CollectionBridge) arg1).getList();
                 context.getReturnBuffer().setTo(new IteratorNext(), list.listIterator(), null);
+            }
+        }
+
+        private static class ListIndex extends AbstractFunction2 {
+            @Override
+            public void resume(ExecutionContext context, Object suspendedState) throws ResolvedControlThrowable {
+                throw new NonsuspendableFunctionException();
+            }
+
+            @Override
+            public void invoke(ExecutionContext context, Object arg1, Object arg2) throws ResolvedControlThrowable {
+                final List list = ((CollectionBridge) arg1).getList();
+                final int index = ((Long) arg2).intValue() - 1;
+                if (index == list.size()) {
+                    context.getReturnBuffer().setTo(null);
+                    return;
+                }
+                context.getReturnBuffer().setTo(list.get(index));
             }
         }
     }

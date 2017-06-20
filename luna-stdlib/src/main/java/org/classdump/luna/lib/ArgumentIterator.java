@@ -18,16 +18,15 @@ package org.classdump.luna.lib;
 
 import org.classdump.luna.ByteString;
 import org.classdump.luna.Conversions;
+import org.classdump.luna.LuaObject;
+import org.classdump.luna.LuaType;
 import org.classdump.luna.MetatableProvider;
 import org.classdump.luna.Table;
-import org.classdump.luna.LuaType;
 import org.classdump.luna.Userdata;
 import org.classdump.luna.ValueTypeNamer;
 import org.classdump.luna.runtime.Coroutine;
 import org.classdump.luna.runtime.LuaFunction;
 import org.classdump.luna.util.Check;
-import org.classdump.luna.lib.NameMetamethodValueTypeNamer;
-import org.classdump.luna.lib.UnexpectedArgumentException;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -35,6 +34,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static org.classdump.luna.LuaFormat.TYPENAME_FUNCTION;
+import static org.classdump.luna.LuaFormat.TYPENAME_LUAOBJECT;
 import static org.classdump.luna.LuaFormat.TYPENAME_NUMBER;
 import static org.classdump.luna.LuaFormat.TYPENAME_STRING;
 import static org.classdump.luna.LuaFormat.TYPENAME_TABLE;
@@ -652,6 +652,39 @@ public class ArgumentIterator implements Iterator<Object> {
 		return nextUserdata(TYPENAME_USERDATA.toString(), Userdata.class);
 	}
 
+	/**
+	 * Returns the argument {@code o} at the current position if {@code o} is a {@link LuaObject}
+	 * i.e. can have a metatable attached to it, in which case it also advances the current position.
+	 *
+	 * <p>If there is no argument at the current position or the argument {@code s} is not
+	 * a lua object, throws a {@link BadArgumentException}. (In that case, the current
+	 * position is not advanced.)</p>
+	 *
+	 * @return  the lua object at the current position
+	 *
+	 * @throws BadArgumentException  if there is no argument at current position,
+	 *                               or the argument at current position is not a lua object
+	 */
+	public LuaObject nextLuaObject() {
+		return nextStrict(TYPENAME_LUAOBJECT, LuaObject.class);
+	}
+
+	/**
+	 * Returns the argument {@code o} at the current position if {@code o} is of the given class,
+	 * in which case it also advances the current position.
+	 *
+	 * <p>If there is no argument at the current position or the argument {@code s} is not
+	 * of the required type, throws a {@link BadArgumentException}. (In that case, the current
+	 * position is not advanced.)</p>
+	 *
+	 * @return  the object at the current position
+	 *
+	 * @throws BadArgumentException  if there is no argument at current position,
+	 *                               or the argument at current position is not a of the required type
+	 */
+	public <T> T nextOfClass(Class<T> aClass) {
+		return nextStrict(ByteString.of(aClass.getTypeName()), aClass);
+	}
 	/**
 	 * If there is an argument {@code o} at the current position, returns {@code o} and
 	 * advances the current position. Otherwise, returns {@code defaultValue} (without

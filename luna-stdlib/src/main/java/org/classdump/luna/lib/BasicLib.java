@@ -43,10 +43,18 @@
 
 package org.classdump.luna.lib;
 
-import org.classdump.luna.*;
-import org.classdump.luna.env.RuntimeEnvironment;
+import org.classdump.luna.ByteString;
 import org.classdump.luna.ByteStringBuilder;
-import org.classdump.luna.lib.NameMetamethodValueTypeNamer;
+import org.classdump.luna.Conversions;
+import org.classdump.luna.LuaObject;
+import org.classdump.luna.LuaRuntimeException;
+import org.classdump.luna.Metatables;
+import org.classdump.luna.Ordering;
+import org.classdump.luna.PlainValueTypeNamer;
+import org.classdump.luna.StateContext;
+import org.classdump.luna.Table;
+import org.classdump.luna.Variable;
+import org.classdump.luna.env.RuntimeEnvironment;
 import org.classdump.luna.load.ChunkLoader;
 import org.classdump.luna.load.LoaderException;
 import org.classdump.luna.runtime.Dispatch;
@@ -1004,13 +1012,13 @@ public final class BasicLib {
 		protected void invoke(ExecutionContext context, ArgumentIterator args)
 				throws ResolvedControlThrowable {
 
-			Table table = args.nextTable();
+			LuaObject luaObject = args.nextLuaObject();
 			long index = args.nextInteger();
 
 			index += 1;
 
 			try {
-				Dispatch.index(context, table, index);
+				Dispatch.index(context, luaObject, index);
 			}
 			catch (UnresolvedControlThrowable ct) {
 				throw ct.resolve(this, index);
@@ -1047,13 +1055,7 @@ public final class BasicLib {
 
 		@Override
 		protected void invoke(ExecutionContext context, ArgumentIterator args) throws ResolvedControlThrowable {
-			Object t;
-			// userdata can have __pairs as well...
-			try {
-				t = args.nextTable();
-			} catch (BadArgumentException ignored) {
-				t = args.nextUserdata();
-			}
+			LuaObject t = args.nextLuaObject();
 			Object metamethod = Metatables.getMetamethod(context, MT_PAIRS, t);
 
 			if (metamethod != null) {
@@ -1090,7 +1092,7 @@ public final class BasicLib {
 
 		@Override
 		protected void invoke(ExecutionContext context, ArgumentIterator args) throws ResolvedControlThrowable {
-			Table t = args.nextTable();
+			LuaObject t = args.nextLuaObject();
 			context.getReturnBuffer().setTo(INext.INSTANCE, t, 0L);
 		}
 
